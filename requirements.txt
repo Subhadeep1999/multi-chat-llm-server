@@ -1,5 +1,24 @@
 fastapi
-uvicorn
+uvicorn[standard]
+
+# Database
+sqlalchemy>=2.0
+asyncpg
+psycopg2-binary
+
+# Auth & Security
+passlib==1.7.4
+bcrypt==4.0.1
+python-jose
+email-validator
+google-auth
+
+# Environment
 python-dotenv
-openai
+
+# Pydantic
+pydantic>=2.0
+
+# LLM SDKs
 google-generativeai
+requests
