@@ -1,3 +1,7 @@
+# Delete a chat session and its messages
+from fastapi import status
+from sqlalchemy import delete as sqlalchemy_delete
+
 # List all chat sessions (for sidebar)
 from fastapi import HTTPException
 from sqlalchemy import asc
@@ -47,7 +51,7 @@ async def get_chat_history(session_id: UUID, db: AsyncSession = Depends(get_db))
     )
     messages = result.scalars().all()
     if not messages:
-        raise HTTPException(status_code=404, detail="No chat history found for this session.")
+        return []
     # Return all messages with selected_llm info
     return [
         {
@@ -174,3 +178,17 @@ async def multi_llm_chat(
         ))
     await db.commit()
     return {"responses": responses}
+
+# Delete a chat session and all its messages
+@router.delete("/delete/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_chat_session(session_id: UUID, db: AsyncSession = Depends(get_db)):
+    # Delete all messages for this session
+    await db.execute(
+        sqlalchemy_delete(ChatMessage).where(ChatMessage.session_id == session_id)
+    )
+    # Delete the session itself
+    result = await db.execute(
+        sqlalchemy_delete(ChatSession).where(ChatSession.id == session_id)
+    )
+    await db.commit()
+    return
