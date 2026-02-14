@@ -16,7 +16,7 @@ DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT
 
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True
+    echo=False
 )
 
 AsyncSessionLocal = sessionmaker(
