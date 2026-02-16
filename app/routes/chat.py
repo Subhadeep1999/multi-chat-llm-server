@@ -18,11 +18,12 @@ from app.schemas import ChatStartResponse
 from app.llms.gemini_mock import ask_gemini
 from app.llms.deepseek_chat_mock import ask_deepseek_chat
 from app.llms.deepseek_coder_mock import ask_deepseek_coder
+from app.core.dependencies import get_current_user_session
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 @router.get("/sessions")
-async def list_chat_sessions(db: AsyncSession = Depends(get_db)):
+async def list_chat_sessions(db: AsyncSession = Depends(get_db), user_session=Depends(get_current_user_session)):
     result = await db.execute(
         select(ChatSession).order_by(ChatSession.created_at.desc())
     )
@@ -45,7 +46,7 @@ async def list_chat_sessions(db: AsyncSession = Depends(get_db)):
 
 # Fetch chat history for a session
 @router.get("/history/{session_id}")
-async def get_chat_history(session_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_chat_history(session_id: UUID, db: AsyncSession = Depends(get_db), user_session=Depends(get_current_user_session)):
     result = await db.execute(
         select(ChatMessage).where(ChatMessage.session_id == session_id).order_by(asc(ChatMessage.created_at))
     )
@@ -67,9 +68,7 @@ async def get_chat_history(session_id: UUID, db: AsyncSession = Depends(get_db))
 
 
 @router.post("/start", response_model=ChatStartResponse)
-async def start_chat(
-    db: AsyncSession = Depends(get_db),
-):
+async def start_chat(db: AsyncSession = Depends(get_db), user_session=Depends(get_current_user_session)):
     session = ChatSession(
         mode="MULTI",
         selected_llm=None,
@@ -94,6 +93,7 @@ class MultiLLMChatRequest(BaseModel):
 async def multi_llm_chat(
     payload: MultiLLMChatRequest,
     db: AsyncSession = Depends(get_db),
+    user_session=Depends(get_current_user_session),
 ):
     result = await db.execute(
         select(ChatSession)

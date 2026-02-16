@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.db.models import ChatSession, ChatMessage
+from app.db.models import ChatSession, ChatMessage, UserSession
 
 
 # -----------------------------
@@ -112,3 +112,30 @@ async def get_llm_history(
         {"role": msg.role, "content": msg.content}
         for msg in messages
     ]
+
+
+# -----------------------------
+# User Session (JWT Token Store)
+# -----------------------------
+async def create_user_session(db: AsyncSession, user_id: str, token: str):
+    session = UserSession(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        token=token
+    )
+    db.add(session)
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+async def get_user_session_by_token(db: AsyncSession, token: str):
+    result = await db.execute(
+        select(UserSession).where(UserSession.token == token)
+    )
+    return result.scalar_one_or_none()
+
+async def delete_user_session_by_token(db: AsyncSession, token: str):
+    session = await get_user_session_by_token(db, token)
+    if session:
+        await db.delete(session)
+        await db.commit()
