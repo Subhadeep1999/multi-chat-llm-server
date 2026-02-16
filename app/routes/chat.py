@@ -24,8 +24,20 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 @router.get("/sessions")
 async def list_chat_sessions(db: AsyncSession = Depends(get_db), user_session=Depends(get_current_user_session)):
+    import uuid
+    user_id = user_session.user_id
+    # Always convert to standard uuid.UUID
+    try:
+        user_id = uuid.UUID(str(user_id))
+    except Exception as e:
+        import logging
+        logger = logging.getLogger("chat_sessions")
+        logger.error(f"Failed to convert user_id to uuid.UUID: {user_id}, error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid user_id format")
     result = await db.execute(
-        select(ChatSession).order_by(ChatSession.created_at.desc())
+        select(ChatSession)
+        .where(ChatSession.user_id == user_id)
+        .order_by(ChatSession.created_at.desc())
     )
     sessions = result.scalars().all()
     # Optionally, fetch the first message for preview
@@ -70,8 +82,9 @@ async def get_chat_history(session_id: UUID, db: AsyncSession = Depends(get_db),
 @router.post("/start", response_model=ChatStartResponse)
 async def start_chat(db: AsyncSession = Depends(get_db), user_session=Depends(get_current_user_session)):
     session = ChatSession(
-        mode="MULTI",
-        selected_llm=None,
+           user_id=user_session.user_id,
+           mode="MULTI",
+           selected_llm=None,
     )
     db.add(session)
     await db.commit()
