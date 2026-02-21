@@ -8,9 +8,11 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
+from typing import Optional
+
 class SelectLlmRequest(BaseModel):
     session_id: UUID
-    llm: str
+    llm: Optional[str] = None
 
 @router.post("/chat/select-llm")
 async def select_llm(
