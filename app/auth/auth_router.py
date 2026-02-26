@@ -20,11 +20,11 @@ from app.db.crud import create_user_session, delete_user_session_by_token
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=TokenResponse)
 async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == payload.email))
     if result.scalar_one_or_none():
-        raise HTTPException(400, "Email already registered")
+        raise HTTPException(status_code=400, detail="Email already registered")
 
     user = User(
         id=uuid.uuid4(),
@@ -37,7 +37,10 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     await db.commit()
     await db.refresh(user)
 
-    return {"id": str(user.id), "email": user.email}
+    # Create token after registration
+    token = create_access_token({"sub": str(user.id), "email": user.email})
+    await create_user_session(db, str(user.id), token)
+    return {"access_token": token}
 
 
 @router.post("/login", response_model=TokenResponse)
